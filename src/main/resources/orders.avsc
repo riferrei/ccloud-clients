@@ -1,0 +1,9 @@
+{"namespace": "io.confluent.devx.demo.model",
+ "type": "record",
+ "name": "Order",
+ "fields": [
+     {"name": "id", "type": "string"},
+     {"name": "date", "type": "long", "logicalType" : "date"},
+     {"name": "amount", "type": "double"}
+ ]
+}
