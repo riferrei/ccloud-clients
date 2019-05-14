@@ -10,6 +10,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.serialization.StringSerializer;
 
 import io.confluent.devx.demo.model.Order;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
@@ -49,7 +50,7 @@ public class NativeProducer {
     Order order = new Order();
     order.setId(generatedKey);
     order.setDate(new Date().getTime());
-    order.setAmount(random.nextDouble());
+    order.setAmount(Double.valueOf(random.nextInt(1000)));
 
     return order;
 
@@ -71,7 +72,7 @@ public class NativeProducer {
     Properties producerConfig = new Properties();
 
     producerConfig.setProperty(ProducerConfig.ACKS_CONFIG, "all");
-    producerConfig.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class.getName());
+    producerConfig.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     producerConfig.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class.getName());
     producerConfig.load(NativeProducer.class.getResourceAsStream("/ccloud.properties"));
 
