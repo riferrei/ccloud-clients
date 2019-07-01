@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>io.confluent.devx.demo</groupId>
+  <groupId>io.confluent.cloud.demo</groupId>
   <artifactId>ccloud-clients</artifactId>
   <packaging>jar</packaging>
   <version>1.0</version>
@@ -34,7 +34,7 @@
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-clients</artifactId>
-      <version>2.2.1</version>
+      <version>2.3.0</version>
     </dependency>
     <dependency>
       <groupId>io.confluent</groupId>
@@ -101,7 +101,7 @@
               <goal>schema</goal>
             </goals>
             <configuration>
-              <sourceDirectory>src/main/resources/avro</sourceDirectory>
+              <sourceDirectory>src/main/resources/avro/</sourceDirectory>
               <outputDirectory>src/main/java/</outputDirectory>
             </configuration>
           </execution>
