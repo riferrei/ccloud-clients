@@ -14,25 +14,27 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 import io.confluent.cloud.demo.clients.model.Order;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import static io.confluent.cloud.demo.clients.Utils.*;
 
 public class NativeProducer {
 
-  public void run(Properties producerConfig) {
+  private void run(Properties properties) {
 
-    producer = new KafkaProducer<String, Order>(producerConfig);
+    createTopic(properties);
+    producer = new KafkaProducer<String, Order>(properties);
     ProducerRecord<String, Order> record = null;
 
     for (;;) {
 
       String generatedKey = UUID.randomUUID().toString();
-      record = new ProducerRecord<String, Order>("orders",
+      record = new ProducerRecord<String, Order>(ORDERS,
         generatedKey, createOrder(generatedKey));
 
       producer.send(record, new Callback() {
 
         @Override
         public void onCompletion(RecordMetadata metadata, Exception exception) {
-          System.out.println("Order '" + generatedKey + "' was created successfully!");
+          System.out.println("Order '" + generatedKey + "' created successfully!");
         }
         
       });
@@ -69,14 +71,14 @@ public class NativeProducer {
 
   public static void main(String args[]) throws Exception {
 
-    Properties producerConfig = new Properties();
+    Properties properties = new Properties();
 
-    producerConfig.setProperty(ProducerConfig.ACKS_CONFIG, "all");
-    producerConfig.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-    producerConfig.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class.getName());
-    producerConfig.load(NativeProducer.class.getResourceAsStream("/ccloud.properties"));
+    properties.setProperty(ProducerConfig.ACKS_CONFIG, "all");
+    properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+    properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class.getName());
+    properties.load(NativeProducer.class.getResourceAsStream("/ccloud.properties"));
 
-    new NativeProducer().run(producerConfig);
+    new NativeProducer().run(properties);
 
   }
 

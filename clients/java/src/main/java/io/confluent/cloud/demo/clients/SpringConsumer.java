@@ -20,12 +20,13 @@ import org.springframework.stereotype.Service;
 
 import io.confluent.cloud.demo.clients.model.Order;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import static io.confluent.cloud.demo.clients.Utils.*;
 
 @Configuration @Service
 @SpringBootApplication
 public class SpringConsumer {
 
-    @KafkaListener(topics = "orders")
+    @KafkaListener(topics = ORDERS)
     public void consume(ConsumerRecord<String, Order> record) {
         System.out.println(record.value());
     }
@@ -43,10 +44,11 @@ public class SpringConsumer {
         consumerConfig.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName());
 
         InputStream is = SpringConsumer.class.getResourceAsStream("/ccloud.properties");
-        Properties props = new Properties(); props.load(is);
+        Properties properties = new Properties(); properties.load(is);
+        createTopic(properties);
 
-        for (Object key : props.keySet()) {
-            consumerConfig.put((String) key, props.get(key));
+        for (Object key : properties.keySet()) {
+            consumerConfig.put((String) key, properties.get(key));
         }
 
         return new DefaultKafkaConsumerFactory<String, Order>(consumerConfig);
