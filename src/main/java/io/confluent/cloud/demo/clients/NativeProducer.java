@@ -1,4 +1,4 @@
-package io.confluent.devx.demo.clients;
+package io.confluent.cloud.demo.clients;
 
 import java.util.Date;
 import java.util.Properties;
@@ -12,7 +12,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
 
-import io.confluent.devx.demo.model.Order;
+import io.confluent.cloud.demo.clients.model.Order;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 
 public class NativeProducer {

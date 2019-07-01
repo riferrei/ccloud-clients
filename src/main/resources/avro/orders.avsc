@@ -1,4 +1,4 @@
-{"namespace": "io.confluent.devx.demo.model",
+{"namespace": "io.confluent.cloud.demo.clients.model",
  "type": "record",
  "name": "Order",
  "fields": [

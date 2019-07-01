@@ -1,4 +1,4 @@
-package io.confluent.devx.demo.clients;
+package io.confluent.cloud.demo.clients;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -10,7 +10,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
-import io.confluent.devx.demo.model.Order;
+import io.confluent.cloud.demo.clients.model.Order;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 
 public class NativeConsumer {

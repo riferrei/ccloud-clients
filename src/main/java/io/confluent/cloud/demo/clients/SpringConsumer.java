@@ -1,4 +1,4 @@
-package io.confluent.devx.demo.clients;
+package io.confluent.cloud.demo.clients;
 
 import java.io.InputStream;
 import java.util.HashMap;
@@ -18,7 +18,7 @@ import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.stereotype.Service;
 
-import io.confluent.devx.demo.model.Order;
+import io.confluent.cloud.demo.clients.model.Order;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 
 @Configuration @Service
