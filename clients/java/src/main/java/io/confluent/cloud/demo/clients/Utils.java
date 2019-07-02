@@ -2,10 +2,12 @@ package io.confluent.cloud.demo.clients;
 
 import java.util.Collections;
 import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.ListTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.common.errors.TopicExistsException;
 
 public class Utils {
 
@@ -13,10 +15,17 @@ public class Utils {
 
     public static void createTopic(Properties properties) {
 
-        NewTopic newTopic = new NewTopic(ORDERS, 4, (short) 3);
         try (AdminClient adminClient = AdminClient.create(properties)) {
-            adminClient.createTopics(Collections.singletonList(newTopic));
-        } catch (TopicExistsException tee) {}
+
+            ListTopicsResult topics = adminClient.listTopics();
+            Set<String> topicNames = topics.names().get();
+
+            if (!topicNames.contains(ORDERS)) {
+                NewTopic newTopic = new NewTopic(ORDERS, 4, (short) 3);
+                adminClient.createTopics(Collections.singletonList(newTopic));
+            }
+
+        } catch (InterruptedException | ExecutionException ex) {}
 
     }
 
