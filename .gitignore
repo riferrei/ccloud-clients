@@ -6,4 +6,6 @@ clients/java/.project
 clients/java/.classpath
 clients/java/.factorypath
 clients/java/.settings/**/*.*
-clients/java/src/main/resources/ccloud.properties
+clients/go/bin/**/*.*
+clients/go/pkg/**/*.*
+resources/ccloud.properties
