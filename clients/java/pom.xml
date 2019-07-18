@@ -95,7 +95,8 @@
                   <directory>../../resources/</directory>
                   <filtering>false</filtering>
                   <includes>
-                    <include>**/*.*</include>
+                    <include>**/*.properties</include>
+                    <include>**/*.avsc</include>
                   </includes>
                 </resource>
               </resources>
