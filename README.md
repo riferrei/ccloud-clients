@@ -1,4 +1,4 @@
-Apache Kafka Clients for Confluent Cloud
+Apache Kafka Clients for Confluent Cloud<sup>TM</sup>
 =====================================================
 
 Clients:
@@ -11,4 +11,4 @@ Confluent's serializer e deserializar to handle records using Avro.
 client. It uses [goavro](github.com/linkedin/goavro) from LinkedIn to
 serialize and deserialize records using Avro.
 
-This README file is still in development so don't expect too much details here. The code is self-explanatory, so I would strongly recommend going straight there.
+This README file is still in development so don't expect too many details here. The code is self-explanatory, so I would strongly recommend going straight there.
