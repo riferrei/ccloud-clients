@@ -69,10 +69,9 @@ func CreateSchemaRegistryClient(schemaRegistryURL string,
 
 // GetSchema returns a goavro.Codec giving the schema id
 func (client *SchemaRegistryClient) GetSchema(schemaID int) (*goavro.Codec, error) {
-	// First check if there is a entry in the cache
-	// corresponding to the schema id. Make sure to
-	// serialize access to the cache to avoid a race
-	// condition if multiple clients are executing.
+	// First check if there is an entry in the cache
+	// that corresponds to the given schema id. And
+	// return it as quick as possible if there is.
 	client.schemaCacheLock.RLock()
 	cachedResult := client.schemaCache[schemaID]
 	client.schemaCacheLock.RUnlock()
@@ -94,7 +93,9 @@ func (client *SchemaRegistryClient) GetSchema(schemaID int) (*goavro.Codec, erro
 	codec, err := goavro.NewCodec(schema.Schema)
 	// Since making HTTP calls is expensive, let's
 	// cache the codec (associating with the schema
-	// id) so the next call executes faster.
+	// id) so the next call executes faster. Need
+	// to serialize access here since the client
+	// can be invoked from multiple go routines.
 	if err == nil {
 		client.schemaCacheLock.Lock()
 		client.schemaCache[schemaID] = codec
@@ -106,9 +107,8 @@ func (client *SchemaRegistryClient) GetSchema(schemaID int) (*goavro.Codec, erro
 // CreateSubject adds a schema to the subject if not currently cached
 func (client *SchemaRegistryClient) CreateSubject(subject string, codec *goavro.Codec) (int, error) {
 	// First check if there is a entry in the cache
-	// corresponding to the subject. Make sure to
-	// serialize access to the cache to avoid a race
-	// condition if multiple clients are executing.
+	// corresponding to the subject. And return it
+	// as quick as possible if there is.
 	client.subjectCacheLock.RLock()
 	cachedResult := client.subjectCache[subject]
 	client.subjectCacheLock.RUnlock()
@@ -135,6 +135,8 @@ func (client *SchemaRegistryClient) CreateSubject(subject string, codec *goavro.
 	// Since making HTTP calls is expensive, let's
 	// cache the schema id (associating with the
 	// subject) so the next call executes faster.
+	// Need to serialize access here since the client
+	// can be invoked from multiple go routines.
 	if parseErr == nil {
 		client.subjectCacheLock.Lock()
 		client.subjectCache[subject] = id.ID
