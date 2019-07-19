@@ -163,12 +163,7 @@ func (client *SchemaRegistryClient) httpCall(method, uri string, payload io.Read
 		return nil, execErr
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		err := &Error{}
-		parseErr := json.NewDecoder(resp.Body).Decode(&err)
-		if parseErr != nil {
-			return nil, &Error{resp.StatusCode,
-				"Unrecognized error found"}
-		}
+		err := &Error{ErrorCode: resp.StatusCode, Message: resp.Status}
 		return nil, err
 	}
 	return ioutil.ReadAll(resp.Body)
