@@ -26,7 +26,6 @@ const schemaFile string = "../../../../resources/orders.avsc"
 func main() {
 
 	topic := "orders"
-	schema, _ := ioutil.ReadFile(schemaFile)
 	props := make(map[string]string)
 	ccloud.LoadProperties(props)
 
@@ -46,6 +45,16 @@ func main() {
 		panic(fmt.Sprintf("Failed to create producer: %s", err))
 	}
 
+	// Load Avro schema and register against Schema
+	// Registry if this is the first time. Use the
+	// schema id for the record value later.
+	schema, _ := ioutil.ReadFile(schemaFile)
+	avroCodec, _ := goavro.NewCodec(string(schema))
+	schemaID, err := schemaRegistryClient.CreateSubject(topic, avroCodec)
+	if err != nil {
+		panic(fmt.Sprintf("Error using Schema Registry: %s", err))
+	}
+
 	for {
 
 		// Create key and value
@@ -56,12 +65,7 @@ func main() {
 			Amount: float64(rand.Intn(1000))}
 		value, _ := json.Marshal(newOrder)
 
-		// Serialize the record value using Avro
-		avroCodec, _ := goavro.NewCodec(string(schema))
-		schemaID, err := schemaRegistryClient.CreateSubject(topic, avroCodec)
-		if err != nil {
-			panic(fmt.Sprintf("Error creating the subject in Schema Registry: %s", err))
-		}
+		// Serialize the record value
 		schemaIDBytes := make([]byte, 4)
 		binary.BigEndian.PutUint32(schemaIDBytes, uint32(schemaID))
 		native, _, _ := avroCodec.NativeFromTextual(value)

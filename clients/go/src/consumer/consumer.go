@@ -38,13 +38,19 @@ func main() {
 	for {
 		msg, err := consumer.ReadMessage(100 * time.Millisecond)
 		if err == nil {
+			// Retrieve the schema id from the record value
 			schemaID := binary.BigEndian.Uint32(msg.Value[1:5])
+			// Load the schema from Schema Registry and create
+			// a codec from it. Use it later to deserialize the
+			// the record value.
 			codec, err := schemaRegistryClient.GetSchema(int(schemaID))
 			if err != nil {
-				continue
+				panic(fmt.Sprintf("Error using Schema Registry: %s", err))
 			}
+			// Deserialize the record value using the codec
 			native, _, _ := codec.NativeFromBinary(msg.Value[5:])
 			order, _ := codec.TextualFromNative(nil, native)
+			// Print the record value
 			fmt.Println(string(order))
 		}
 
