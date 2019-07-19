@@ -15,7 +15,8 @@ func main() {
 	ccloud.LoadProperties(props)
 
 	schemaRegistryClient := ccloud.CreateSchemaRegistryClient(
-		props["schema.registry.url"], props["schema.registry.basic.auth.username"],
+		props["schema.registry.url"],
+		props["schema.registry.basic.auth.username"],
 		props["schema.registry.basic.auth.password"])
 
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{

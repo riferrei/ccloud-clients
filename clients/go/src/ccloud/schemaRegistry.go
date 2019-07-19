@@ -55,7 +55,6 @@ const (
 	schemaByID      = "/schemas/ids/%d"
 	subjectVersions = "/subjects/%s/versions"
 	contentType     = "application/vnd.schemaregistry.v1+json"
-	timeout         = 2 * time.Second
 )
 
 // CreateSchemaRegistryClient creates a client to for Schema Registry
@@ -63,103 +62,116 @@ func CreateSchemaRegistryClient(schemaRegistryURL string,
 	userName string, password string) *SchemaRegistryClient {
 	return &SchemaRegistryClient{schemaRegistryURL: schemaRegistryURL,
 		basicAuth:    &basicAuth{userName, password},
-		httpClient:   &http.Client{Timeout: timeout},
+		httpClient:   &http.Client{Timeout: 2 * time.Second},
 		schemaCache:  make(map[int]*goavro.Codec),
 		subjectCache: make(map[string]int)}
 }
 
 // GetSchema returns a goavro.Codec giving the schema id
 func (client *SchemaRegistryClient) GetSchema(schemaID int) (*goavro.Codec, error) {
+	// First check if there is a entry in the cache
+	// corresponding to the schema id. Make sure to
+	// serialize access to the cache to avoid a race
+	// condition if multiple clients are executing.
 	client.schemaCacheLock.RLock()
 	cachedResult := client.schemaCache[schemaID]
 	client.schemaCacheLock.RUnlock()
 	if cachedResult != nil {
 		return cachedResult, nil
 	}
-	resp, err := client.httpCall("GET", fmt.Sprintf(schemaByID, schemaID), nil)
-	if err != nil {
-		return nil, err
+	// If there is no entry in the cache, fetch
+	// the schema using the schema id. Then, create
+	// a codec from it.
+	resp, httpErr := client.httpCall("GET", fmt.Sprintf(schemaByID, schemaID), nil)
+	if httpErr != nil {
+		return nil, httpErr
 	}
-	schema, err := parseSchema(resp)
-	if err != nil {
-		return nil, err
+	var schema = new(schemaResponse)
+	parseErr := json.Unmarshal(resp, &schema)
+	if parseErr != nil {
+		return nil, parseErr
 	}
 	codec, err := goavro.NewCodec(schema.Schema)
-	client.schemaCacheLock.Lock()
-	client.schemaCache[schemaID] = codec
-	client.schemaCacheLock.Unlock()
+	// Since making HTTP calls is expensive, let's
+	// cache the codec (associating with the schema
+	// id) so the next call executes faster.
+	if err == nil {
+		client.schemaCacheLock.Lock()
+		client.schemaCache[schemaID] = codec
+		client.schemaCacheLock.Unlock()
+	}
 	return codec, nil
 }
 
 // CreateSubject adds a schema to the subject if not currently cached
 func (client *SchemaRegistryClient) CreateSubject(subject string, codec *goavro.Codec) (int, error) {
+	// First check if there is a entry in the cache
+	// corresponding to the subject. Make sure to
+	// serialize access to the cache to avoid a race
+	// condition if multiple clients are executing.
 	client.subjectCacheLock.RLock()
 	cachedResult := client.subjectCache[subject]
 	client.subjectCacheLock.RUnlock()
 	if cachedResult > 0 {
 		return cachedResult, nil
 	}
+	// If there is no entry in the cache, create
+	// a text/string version of the schema so it
+	// can be created in Schema Registry. This
+	// will become the latest version asspcoated
+	// with the subject.
 	schema := schemaResponse{codec.Schema()}
-	json, err := json.Marshal(schema)
+	schemaJSON, err := json.Marshal(schema)
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
-	payload := bytes.NewBuffer(json)
-	resp, err := client.httpCall("POST", fmt.Sprintf(subjectVersions, subject), payload)
-	if err != nil {
-		return 0, err
+	payload := bytes.NewBuffer(schemaJSON)
+	resp, httpErr := client.httpCall("POST", fmt.Sprintf(subjectVersions, subject), payload)
+	if httpErr != nil {
+		return -1, httpErr
 	}
-	return parseID(resp)
+	var id = new(idResponse)
+	parseErr := json.Unmarshal(resp, &id)
+	// Since making HTTP calls is expensive, let's
+	// cache the schema id (associating with the
+	// subject) so the next call executes faster.
+	if parseErr == nil {
+		client.subjectCacheLock.Lock()
+		client.subjectCache[subject] = id.ID
+		client.subjectCacheLock.Unlock()
+	}
+	return id.ID, parseErr
 }
 
 func (client *SchemaRegistryClient) httpCall(method, uri string, payload io.Reader) ([]byte, error) {
 	url := fmt.Sprintf("%s%s", client.schemaRegistryURL, uri)
-	req, err := http.NewRequest(method, url, payload)
-	if err != nil {
-		return nil, err
+	req, httpErr := http.NewRequest(method, url, payload)
+	if httpErr != nil {
+		return nil, httpErr
 	}
-	if client.basicAuth != nil {
+	if len(client.basicAuth.userName) > 0 && len(client.basicAuth.password) > 0 {
 		req.SetBasicAuth(client.basicAuth.userName, client.basicAuth.password)
 	}
 	req.Header.Set("Content-Type", contentType)
-	resp, err := client.httpClient.Do(req)
+	resp, execErr := client.httpClient.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if err != nil {
-		return nil, err
+	if execErr != nil {
+		return nil, execErr
 	}
-	if !okStatus(resp) {
-		return nil, newError(resp)
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		err := &Error{}
+		parseErr := json.NewDecoder(resp.Body).Decode(&err)
+		if parseErr != nil {
+			return nil, &Error{resp.StatusCode,
+				"Unrecognized error found"}
+		}
+		return nil, err
 	}
 	return ioutil.ReadAll(resp.Body)
 }
 
-func parseID(str []byte) (int, error) {
-	var id = new(idResponse)
-	err := json.Unmarshal(str, &id)
-	return id.ID, err
-}
-
-func parseSchema(str []byte) (*schemaResponse, error) {
-	var schema = new(schemaResponse)
-	err := json.Unmarshal(str, &schema)
-	return schema, err
-}
-
-func okStatus(resp *http.Response) bool {
-	return resp.StatusCode >= 200 && resp.StatusCode < 400
-}
-
 func (e *Error) Error() string {
 	return fmt.Sprintf("%d - %s", e.ErrorCode, e.Message)
-}
-
-func newError(resp *http.Response) *Error {
-	err := &Error{}
-	parsingErr := json.NewDecoder(resp.Body).Decode(&err)
-	if parsingErr != nil {
-		return &Error{resp.StatusCode, "Unrecognized error found"}
-	}
-	return err
 }
