@@ -54,7 +54,6 @@ func main() {
 			// Print the record value
 			fmt.Println(string(order))
 		}
-
 	}
 
 	consumer.Close()
