@@ -118,7 +118,7 @@ func (client *SchemaRegistryClient) CreateSubject(subject string, codec *goavro.
 	// If there is no entry in the cache, create
 	// a text/string version of the schema so it
 	// can be created in Schema Registry. This
-	// will become the latest version asspcoated
+	// will become the latest version associated
 	// with the subject.
 	schema := schemaResponse{codec.Schema()}
 	schemaJSON, err := json.Marshal(schema)
