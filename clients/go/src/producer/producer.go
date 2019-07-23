@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/linkedin/goavro"
-	"gopkg.in/confluentinc/confluent-kafka-go.v0/kafka"
+	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 // Order data type
@@ -25,9 +25,10 @@ const schemaFile string = "../../../../resources/orders.avsc"
 
 func main() {
 
-	topic := "orders"
 	props := make(map[string]string)
 	ccloud.LoadProperties(props)
+	ccloud.CreateTopic(props)
+	topic := ccloud.ORDERS
 
 	schemaRegistryClient := ccloud.CreateSchemaRegistryClient(
 		props["schema.registry.url"],
@@ -44,6 +45,8 @@ func main() {
 		"sasl.password":           props["sasl.password"]})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create producer: %s", err))
+	} else {
+		defer producer.Close()
 	}
 
 	// Load Avro schema and register against Schema

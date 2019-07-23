@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"gopkg.in/confluentinc/confluent-kafka-go.v0/kafka"
+	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 func main() {
 
 	props := make(map[string]string)
 	ccloud.LoadProperties(props)
+	ccloud.CreateTopic(props)
 
 	schemaRegistryClient := ccloud.CreateSchemaRegistryClient(
 		props["schema.registry.url"],
@@ -32,9 +33,11 @@ func main() {
 		"auto.offset.reset":       "latest"})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create consumer: %s", err))
+	} else {
+		defer consumer.Close()
 	}
 
-	consumer.SubscribeTopics([]string{"orders"}, nil)
+	consumer.SubscribeTopics([]string{ccloud.ORDERS}, nil)
 
 	for {
 		msg, err := consumer.ReadMessage(100 * time.Millisecond)
@@ -55,7 +58,5 @@ func main() {
 			fmt.Println(string(order))
 		}
 	}
-
-	consumer.Close()
 
 }

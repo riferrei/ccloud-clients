@@ -38,7 +38,7 @@ public class SpringConsumer {
 
         consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
-        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, SpringConsumer.class.getSimpleName());
+        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, "java-spring-consumer");
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         consumerConfig.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerConfig.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName());

@@ -51,7 +51,7 @@ public class NativeConsumer {
 
     properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
     properties.setProperty(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
-    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, NativeConsumer.class.getSimpleName());
+    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "java-native-consumer");
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
     properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
     properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName());
