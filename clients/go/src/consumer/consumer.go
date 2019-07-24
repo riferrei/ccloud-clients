@@ -1,21 +1,22 @@
 package main
 
 import (
-	"ccloud"
 	"encoding/binary"
 	"fmt"
 	"time"
+	"utils"
 
+	"github.com/riferrei/srclient"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 func main() {
 
 	props := make(map[string]string)
-	ccloud.LoadProperties(props)
-	ccloud.CreateTopic(props)
+	utils.LoadProperties(props)
+	utils.CreateTopic(props)
 
-	schemaRegistryClient := ccloud.CreateSchemaRegistryClient(props["schema.registry.url"])
+	schemaRegistryClient := srclient.CreateSchemaRegistryClient(props["schema.registry.url"])
 	schemaRegistryClient.SetCredentials(
 		props["schema.registry.basic.auth.username"],
 		props["schema.registry.basic.auth.password"])
@@ -38,7 +39,7 @@ func main() {
 	}
 
 	schemaRegistryClient.EnableCaching(true)
-	consumer.SubscribeTopics([]string{ccloud.ORDERS}, nil)
+	consumer.SubscribeTopics([]string{utils.ORDERS}, nil)
 
 	for {
 		record, err := consumer.ReadMessage(100 * time.Millisecond)

@@ -1,4 +1,4 @@
-package ccloud
+package utils
 
 import (
 	"bufio"

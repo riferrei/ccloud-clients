@@ -1,16 +1,17 @@
 package main
 
 import (
-	"ccloud"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"time"
+	"utils"
 
 	"github.com/google/uuid"
 	"github.com/linkedin/goavro"
+	"github.com/riferrei/srclient"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
@@ -26,11 +27,11 @@ const schemaFile string = "../../../../resources/orders.avsc"
 func main() {
 
 	props := make(map[string]string)
-	ccloud.LoadProperties(props)
-	ccloud.CreateTopic(props)
-	topic := ccloud.ORDERS
+	utils.LoadProperties(props)
+	utils.CreateTopic(props)
+	topic := utils.ORDERS
 
-	schemaRegistryClient := ccloud.CreateSchemaRegistryClient(props["schema.registry.url"])
+	schemaRegistryClient := srclient.CreateSchemaRegistryClient(props["schema.registry.url"])
 	schemaRegistryClient.SetCredentials(
 		props["schema.registry.basic.auth.username"],
 		props["schema.registry.basic.auth.password"])
