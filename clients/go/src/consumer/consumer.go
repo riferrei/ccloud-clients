@@ -15,8 +15,8 @@ func main() {
 	ccloud.LoadProperties(props)
 	ccloud.CreateTopic(props)
 
-	schemaRegistryClient := ccloud.CreateSchemaRegistryClient(
-		props["schema.registry.url"],
+	schemaRegistryClient := ccloud.CreateSchemaRegistryClient(props["schema.registry.url"])
+	schemaRegistryClient.SetCredentials(
 		props["schema.registry.basic.auth.username"],
 		props["schema.registry.basic.auth.password"])
 
@@ -37,6 +37,7 @@ func main() {
 		defer consumer.Close()
 	}
 
+	schemaRegistryClient.EnableCaching(true)
 	consumer.SubscribeTopics([]string{ccloud.ORDERS}, nil)
 
 	for {

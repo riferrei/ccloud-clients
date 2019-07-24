@@ -30,8 +30,8 @@ func main() {
 	ccloud.CreateTopic(props)
 	topic := ccloud.ORDERS
 
-	schemaRegistryClient := ccloud.CreateSchemaRegistryClient(
-		props["schema.registry.url"],
+	schemaRegistryClient := ccloud.CreateSchemaRegistryClient(props["schema.registry.url"])
+	schemaRegistryClient.SetCredentials(
 		props["schema.registry.basic.auth.username"],
 		props["schema.registry.basic.auth.password"])
 

@@ -13,34 +13,38 @@ import (
 	"github.com/linkedin/goavro"
 )
 
-// Error holds more detailed information about
-// errors coming back from schema registry
+// SchemaRegistryClientInterface allows applications to
+// interact with Schema Registry services over HTTP.
+type SchemaRegistryClientInterface interface {
+	GetSchema(schemaID int) (*goavro.Codec, error)
+	CreateSubject(subject string, schema string) (int, error)
+	SetCredentials(username string, password string)
+	EnableCaching(value bool)
+}
+
+// SchemaRegistryClient holds the information required
+// to establish HTTP connections, optional authentication
+// data and the caching mechanism for HTTP interactions.
+type SchemaRegistryClient struct {
+	schemaRegistryURL string
+	credentials       *credentials
+	httpClient        *http.Client
+	cachingEnabled    bool
+	schemaCache       map[int]*goavro.Codec
+	schemaCacheLock   sync.RWMutex
+	subjectCache      map[string]int
+	subjectCacheLock  sync.RWMutex
+}
+
+// Error has detailed errors from Schema Registry
 type Error struct {
 	ErrorCode int    `json:"error_code"`
 	Message   string `json:"message"`
 }
 
-// SchemaRegistryClientInterface API for Schema Registry
-type SchemaRegistryClientInterface interface {
-	GetSchema(int) (*goavro.Codec, error)
-	CreateSubject(subject string, codec *goavro.Codec) (int, error)
-}
-
-// BasicAuth holds the credentials for HTTP authentication
-type basicAuth struct {
-	userName string
+type credentials struct {
+	username string
 	password string
-}
-
-// SchemaRegistryClient is a basic http client to interact with schema registry
-type SchemaRegistryClient struct {
-	schemaRegistryURL string
-	basicAuth         *basicAuth
-	httpClient        *http.Client
-	schemaCache       map[int]*goavro.Codec
-	schemaCacheLock   sync.RWMutex
-	subjectCache      map[string]int
-	subjectCacheLock  sync.RWMutex
 }
 
 type schemaWrapper struct {
@@ -58,10 +62,8 @@ const (
 )
 
 // CreateSchemaRegistryClient creates a client to for Schema Registry
-func CreateSchemaRegistryClient(schemaRegistryURL string,
-	userName string, password string) *SchemaRegistryClient {
+func CreateSchemaRegistryClient(schemaRegistryURL string) *SchemaRegistryClient {
 	return &SchemaRegistryClient{schemaRegistryURL: schemaRegistryURL,
-		basicAuth:    &basicAuth{userName, password},
 		httpClient:   &http.Client{Timeout: 2 * time.Second},
 		schemaCache:  make(map[int]*goavro.Codec),
 		subjectCache: make(map[string]int)}
@@ -69,18 +71,14 @@ func CreateSchemaRegistryClient(schemaRegistryURL string,
 
 // GetSchema returns a goavro.Codec giving the schema id
 func (client *SchemaRegistryClient) GetSchema(schemaID int) (*goavro.Codec, error) {
-	// First check if there is an entry in the cache
-	// that corresponds to the given schema id. And
-	// return it as quick as possible if there is.
-	client.schemaCacheLock.RLock()
-	cachedResult := client.schemaCache[schemaID]
-	client.schemaCacheLock.RUnlock()
-	if cachedResult != nil {
-		return cachedResult, nil
+	if client.cachingEnabled {
+		client.schemaCacheLock.RLock()
+		cachedResult := client.schemaCache[schemaID]
+		client.schemaCacheLock.RUnlock()
+		if cachedResult != nil {
+			return cachedResult, nil
+		}
 	}
-	// If there is no entry in the cache, fetch
-	// the schema using the schema id. Then, create
-	// a codec from it.
 	resp, httpErr := client.httpCall("GET", fmt.Sprintf(schemaByID, schemaID), nil)
 	if httpErr != nil {
 		return nil, httpErr
@@ -91,12 +89,7 @@ func (client *SchemaRegistryClient) GetSchema(schemaID int) (*goavro.Codec, erro
 		return nil, parseErr
 	}
 	codec, err := goavro.NewCodec(schemaWrapper.Schema)
-	// Since making HTTP calls is expensive, let's
-	// cache the codec (associating with the schema
-	// id) so the next call executes faster. Need
-	// to serialize access here since the client
-	// can be invoked from multiple go routines.
-	if err == nil {
+	if client.cachingEnabled && err == nil {
 		client.schemaCacheLock.Lock()
 		client.schemaCache[schemaID] = codec
 		client.schemaCacheLock.Unlock()
@@ -106,43 +99,49 @@ func (client *SchemaRegistryClient) GetSchema(schemaID int) (*goavro.Codec, erro
 
 // CreateSubject adds a schema to the subject if not currently cached
 func (client *SchemaRegistryClient) CreateSubject(subject string, schema string) (int, error) {
-	// First check if there is a entry in the cache
-	// corresponding to the subject. And return it
-	// as quick as possible if there is.
-	client.subjectCacheLock.RLock()
-	cachedResult := client.subjectCache[subject]
-	client.subjectCacheLock.RUnlock()
-	if cachedResult > 0 {
-		return cachedResult, nil
+	if client.cachingEnabled {
+		client.subjectCacheLock.RLock()
+		cachedResult := client.subjectCache[subject]
+		client.subjectCacheLock.RUnlock()
+		if cachedResult > 0 {
+			return cachedResult, nil
+		}
 	}
-	// If there is no entry in the cache, create
-	// a text/string version of the schema so it
-	// can be created in Schema Registry. This
-	// will become the latest version associated
-	// with the subject.
 	schemaWrapper := schemaWrapper{schema}
-	schemaJSON, err := json.Marshal(schemaWrapper)
+	schemaBytes, err := json.Marshal(schemaWrapper)
 	if err != nil {
 		return -1, err
 	}
-	payload := bytes.NewBuffer(schemaJSON)
+	payload := bytes.NewBuffer(schemaBytes)
 	resp, httpErr := client.httpCall("POST", fmt.Sprintf(subjectVersions, subject), payload)
 	if httpErr != nil {
 		return -1, httpErr
 	}
 	var idWrapper = new(idWrapper)
 	parseErr := json.Unmarshal(resp, &idWrapper)
-	// Since making HTTP calls is expensive, let's
-	// cache the schema id (associating with the
-	// subject) so the next call executes faster.
-	// Need to serialize access here since the client
-	// can be invoked from multiple go routines.
-	if parseErr == nil {
+	if client.cachingEnabled && parseErr == nil {
 		client.subjectCacheLock.Lock()
 		client.subjectCache[subject] = idWrapper.ID
 		client.subjectCacheLock.Unlock()
 	}
 	return idWrapper.ID, parseErr
+}
+
+// SetCredentials allows users to set credentials for
+// Schema Registry, in case it has been configured to
+// enable HTTP authentication over secure channels.
+func (client *SchemaRegistryClient) SetCredentials(username string, password string) {
+	if len(username) > 0 && len(password) > 0 {
+		credentials := credentials{username, password}
+		client.credentials = &credentials
+	}
+}
+
+// EnableCaching allows application to cache any values
+// that have been returned by Schema Registry, to speed
+// up performance if these values never changes.
+func (client *SchemaRegistryClient) EnableCaching(value bool) {
+	client.cachingEnabled = value
 }
 
 func (client *SchemaRegistryClient) httpCall(method, uri string, payload io.Reader) ([]byte, error) {
@@ -151,8 +150,8 @@ func (client *SchemaRegistryClient) httpCall(method, uri string, payload io.Read
 	if httpErr != nil {
 		return nil, httpErr
 	}
-	if len(client.basicAuth.userName) > 0 && len(client.basicAuth.password) > 0 {
-		req.SetBasicAuth(client.basicAuth.userName, client.basicAuth.password)
+	if client.credentials != nil {
+		req.SetBasicAuth(client.credentials.username, client.credentials.password)
 	}
 	req.Header.Set("Content-Type", contentType)
 	resp, execErr := client.httpClient.Do(req)
