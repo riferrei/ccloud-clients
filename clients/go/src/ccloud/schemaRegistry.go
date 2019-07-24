@@ -43,11 +43,11 @@ type SchemaRegistryClient struct {
 	subjectCacheLock  sync.RWMutex
 }
 
-type schemaResponse struct {
+type schemaWrapper struct {
 	Schema string `json:"schema"`
 }
 
-type idResponse struct {
+type idWrapper struct {
 	ID int `json:"id"`
 }
 
@@ -85,12 +85,12 @@ func (client *SchemaRegistryClient) GetSchema(schemaID int) (*goavro.Codec, erro
 	if httpErr != nil {
 		return nil, httpErr
 	}
-	var schema = new(schemaResponse)
-	parseErr := json.Unmarshal(resp, &schema)
+	var schemaWrapper = new(schemaWrapper)
+	parseErr := json.Unmarshal(resp, &schemaWrapper)
 	if parseErr != nil {
 		return nil, parseErr
 	}
-	codec, err := goavro.NewCodec(schema.Schema)
+	codec, err := goavro.NewCodec(schemaWrapper.Schema)
 	// Since making HTTP calls is expensive, let's
 	// cache the codec (associating with the schema
 	// id) so the next call executes faster. Need
@@ -105,7 +105,7 @@ func (client *SchemaRegistryClient) GetSchema(schemaID int) (*goavro.Codec, erro
 }
 
 // CreateSubject adds a schema to the subject if not currently cached
-func (client *SchemaRegistryClient) CreateSubject(subject string, codec *goavro.Codec) (int, error) {
+func (client *SchemaRegistryClient) CreateSubject(subject string, schema string) (int, error) {
 	// First check if there is a entry in the cache
 	// corresponding to the subject. And return it
 	// as quick as possible if there is.
@@ -120,8 +120,8 @@ func (client *SchemaRegistryClient) CreateSubject(subject string, codec *goavro.
 	// can be created in Schema Registry. This
 	// will become the latest version associated
 	// with the subject.
-	schema := schemaResponse{codec.Schema()}
-	schemaJSON, err := json.Marshal(schema)
+	schemaWrapper := schemaWrapper{schema}
+	schemaJSON, err := json.Marshal(schemaWrapper)
 	if err != nil {
 		return -1, err
 	}
@@ -130,8 +130,8 @@ func (client *SchemaRegistryClient) CreateSubject(subject string, codec *goavro.
 	if httpErr != nil {
 		return -1, httpErr
 	}
-	var id = new(idResponse)
-	parseErr := json.Unmarshal(resp, &id)
+	var idWrapper = new(idWrapper)
+	parseErr := json.Unmarshal(resp, &idWrapper)
 	// Since making HTTP calls is expensive, let's
 	// cache the schema id (associating with the
 	// subject) so the next call executes faster.
@@ -139,10 +139,10 @@ func (client *SchemaRegistryClient) CreateSubject(subject string, codec *goavro.
 	// can be invoked from multiple go routines.
 	if parseErr == nil {
 		client.subjectCacheLock.Lock()
-		client.subjectCache[subject] = id.ID
+		client.subjectCache[subject] = idWrapper.ID
 		client.subjectCacheLock.Unlock()
 	}
-	return id.ID, parseErr
+	return idWrapper.ID, parseErr
 }
 
 func (client *SchemaRegistryClient) httpCall(method, uri string, payload io.Reader) ([]byte, error) {

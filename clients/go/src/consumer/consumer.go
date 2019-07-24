@@ -40,10 +40,10 @@ func main() {
 	consumer.SubscribeTopics([]string{ccloud.ORDERS}, nil)
 
 	for {
-		msg, err := consumer.ReadMessage(100 * time.Millisecond)
+		record, err := consumer.ReadMessage(100 * time.Millisecond)
 		if err == nil {
 			// Retrieve the schema id from the record value
-			schemaID := binary.BigEndian.Uint32(msg.Value[1:5])
+			schemaID := binary.BigEndian.Uint32(record.Value[1:5])
 			// Load the schema from Schema Registry and create
 			// a codec from it. Use it later to deserialize the
 			// the record value.
@@ -52,7 +52,7 @@ func main() {
 				panic(fmt.Sprintf("Error using Schema Registry: %s", err))
 			}
 			// Deserialize the record value using the codec
-			native, _, _ := codec.NativeFromBinary(msg.Value[5:])
+			native, _, _ := codec.NativeFromBinary(record.Value[5:])
 			order, _ := codec.TextualFromNative(nil, native)
 			// Print the record value
 			fmt.Println(string(order))
