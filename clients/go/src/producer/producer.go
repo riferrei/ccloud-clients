@@ -50,7 +50,7 @@ func main() {
 	schema, err := schemaRegistryClient.GetLatestSchema(topic, false)
 	if schema == nil {
 		schemaBytes, _ := ioutil.ReadFile(schemaFile)
-		schema, err = schemaRegistryClient.CreateSubject(topic, string(schemaBytes), false)
+		schema, err = schemaRegistryClient.CreateSchema(topic, string(schemaBytes), false)
 		if err != nil {
 			panic(fmt.Sprintf("Error creating the schema ---> %s", err))
 		}

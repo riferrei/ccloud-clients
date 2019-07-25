@@ -35,7 +35,6 @@ func main() {
 		defer consumer.Close()
 	}
 
-	schemaRegistryClient.EnableCaching(true)
 	consumer.SubscribeTopics([]string{utils.ORDERS}, nil)
 
 	for {
