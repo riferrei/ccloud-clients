@@ -55,9 +55,9 @@ func main() {
 	// schema id for the record value later.
 	schema, _ := ioutil.ReadFile(schemaFile)
 	avroCodec, _ := goavro.NewCodec(string(schema))
-	schemaID, err := schemaRegistryClient.CreateSubject(topic, string(schema))
+	schemaID, err := schemaRegistryClient.CreateSubject(topic, string(schema), false)
 	if err != nil {
-		panic(fmt.Sprintf("Error using Schema Registry: %s", err))
+		panic(fmt.Sprintf("Error creating the schema: %s", err))
 	}
 
 	for {
