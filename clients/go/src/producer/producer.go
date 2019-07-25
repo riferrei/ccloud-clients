@@ -10,7 +10,6 @@ import (
 	"utils"
 
 	"github.com/google/uuid"
-	"github.com/linkedin/goavro"
 	"github.com/riferrei/srclient"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
@@ -37,27 +36,24 @@ func main() {
 		props["schema.registry.basic.auth.password"])
 
 	producer, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers":       props["bootstrap.servers"],
-		"broker.version.fallback": "0.10.0.0",
-		"api.version.fallback.ms": 0,
-		"sasl.mechanisms":         "PLAIN",
-		"security.protocol":       "SASL_SSL",
-		"sasl.username":           props["sasl.username"],
-		"sasl.password":           props["sasl.password"]})
+		"bootstrap.servers": props["bootstrap.servers"],
+		"sasl.mechanisms":   "PLAIN",
+		"security.protocol": "SASL_SSL",
+		"sasl.username":     props["sasl.username"],
+		"sasl.password":     props["sasl.password"]})
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create producer: %s", err))
+		panic(fmt.Sprintf("Failed to create producer ---> %s", err))
 	} else {
 		defer producer.Close()
 	}
 
-	// Load Avro schema and register against Schema
-	// Registry if this is the first time. Use the
-	// schema id for the record value later.
-	schema, _ := ioutil.ReadFile(schemaFile)
-	avroCodec, _ := goavro.NewCodec(string(schema))
-	schemaID, err := schemaRegistryClient.CreateSubject(topic, string(schema), false)
-	if err != nil {
-		panic(fmt.Sprintf("Error creating the schema: %s", err))
+	schema, err := schemaRegistryClient.GetLatestSchema(topic, false)
+	if schema == nil {
+		schemaBytes, _ := ioutil.ReadFile(schemaFile)
+		schema, err = schemaRegistryClient.CreateSubject(topic, string(schemaBytes), false)
+		if err != nil {
+			panic(fmt.Sprintf("Error creating the schema ---> %s", err))
+		}
 	}
 
 	for {
@@ -72,9 +68,9 @@ func main() {
 
 		// Serialize the record value
 		schemaIDBytes := make([]byte, 4)
-		binary.BigEndian.PutUint32(schemaIDBytes, uint32(schemaID))
-		native, _, _ := avroCodec.NativeFromTextual(value)
-		valueBytes, _ := avroCodec.BinaryFromNative(nil, native)
+		binary.BigEndian.PutUint32(schemaIDBytes, uint32(schema.ID))
+		native, _, _ := schema.Codec.NativeFromTextual(value)
+		valueBytes, _ := schema.Codec.BinaryFromNative(nil, native)
 		var recordValue []byte
 		recordValue = append(recordValue, byte(0))
 		recordValue = append(recordValue, schemaIDBytes...)

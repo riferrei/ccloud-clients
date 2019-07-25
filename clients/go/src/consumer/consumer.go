@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"time"
 	"utils"
 
 	"github.com/riferrei/srclient"
@@ -22,18 +21,16 @@ func main() {
 		props["schema.registry.basic.auth.password"])
 
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":       props["bootstrap.servers"],
-		"broker.version.fallback": "0.10.0.0",
-		"api.version.fallback.ms": 0,
-		"sasl.mechanisms":         props["sasl.mechanism"],
-		"security.protocol":       props["security.protocol"],
-		"sasl.username":           props["sasl.username"],
-		"sasl.password":           props["sasl.password"],
-		"session.timeout.ms":      6000,
-		"group.id":                "golang-consumer",
-		"auto.offset.reset":       "latest"})
+		"bootstrap.servers":  props["bootstrap.servers"],
+		"sasl.mechanisms":    props["sasl.mechanism"],
+		"security.protocol":  props["security.protocol"],
+		"sasl.username":      props["sasl.username"],
+		"sasl.password":      props["sasl.password"],
+		"session.timeout.ms": 6000,
+		"group.id":           "golang-consumer",
+		"auto.offset.reset":  "latest"})
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create consumer: %s", err))
+		panic(fmt.Sprintf("Failed to create consumer ---> %s", err))
 	} else {
 		defer consumer.Close()
 	}
@@ -42,22 +39,24 @@ func main() {
 	consumer.SubscribeTopics([]string{utils.ORDERS}, nil)
 
 	for {
-		record, err := consumer.ReadMessage(100 * time.Millisecond)
+		record, err := consumer.ReadMessage(-1)
 		if err == nil {
 			// Retrieve the schema id from the record value
 			schemaID := binary.BigEndian.Uint32(record.Value[1:5])
 			// Load the schema from Schema Registry and create
 			// a codec from it. Use it later to deserialize the
 			// the record value.
-			codec, err := schemaRegistryClient.GetSchema(int(schemaID))
+			schema, err := schemaRegistryClient.GetSchema(int(schemaID))
 			if err != nil {
-				panic(fmt.Sprintf("Error using Schema Registry: %s", err))
+				panic(fmt.Sprintf("Error getting the schema associated with the ID '%d' ---> %s", schemaID, err))
 			}
 			// Deserialize the record value using the codec
-			native, _, _ := codec.NativeFromBinary(record.Value[5:])
-			order, _ := codec.TextualFromNative(nil, native)
+			native, _, _ := schema.Codec.NativeFromBinary(record.Value[5:])
+			order, _ := schema.Codec.TextualFromNative(nil, native)
 			// Print the record value
 			fmt.Println(string(order))
+		} else {
+			fmt.Println(err)
 		}
 	}
 
