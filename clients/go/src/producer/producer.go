@@ -42,7 +42,7 @@ func main() {
 		"sasl.username":     props["sasl.username"],
 		"sasl.password":     props["sasl.password"]})
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create producer ---> %s", err))
+		panic(fmt.Sprintf("Failed to create producer %s", err))
 	}
 	defer producer.Close()
 	go func() {
@@ -64,7 +64,7 @@ func main() {
 		schemaBytes, _ := ioutil.ReadFile(schemaFile)
 		schema, err = schemaRegistryClient.CreateSchema(topic, string(schemaBytes), false)
 		if err != nil {
-			panic(fmt.Sprintf("Error creating the schema ---> %s", err))
+			panic(fmt.Sprintf("Error creating the schema %s", err))
 		}
 	}
 
@@ -80,9 +80,9 @@ func main() {
 
 		// Serialize the record value
 		schemaIDBytes := make([]byte, 4)
-		binary.BigEndian.PutUint32(schemaIDBytes, uint32(schema.ID))
-		native, _, _ := schema.Codec.NativeFromTextual(value)
-		valueBytes, _ := schema.Codec.BinaryFromNative(nil, native)
+		binary.BigEndian.PutUint32(schemaIDBytes, uint32(schema.ID()))
+		native, _, _ := schema.Codec().NativeFromTextual(value)
+		valueBytes, _ := schema.Codec().BinaryFromNative(nil, native)
 		var recordValue []byte
 		recordValue = append(recordValue, byte(0))
 		recordValue = append(recordValue, schemaIDBytes...)

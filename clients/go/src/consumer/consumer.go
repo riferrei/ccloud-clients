@@ -30,7 +30,7 @@ func main() {
 		"group.id":           "golang-consumer",
 		"auto.offset.reset":  "latest"})
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create consumer ---> %s", err))
+		panic(fmt.Sprintf("Failed to create consumer %s", err))
 	} else {
 		defer consumer.Close()
 	}
@@ -50,8 +50,8 @@ func main() {
 				panic(fmt.Sprintf("Error getting the schema associated with the ID '%d' ---> %s", schemaID, err))
 			}
 			// Deserialize the record value using the codec
-			native, _, _ := schema.Codec.NativeFromBinary(record.Value[5:])
-			order, _ := schema.Codec.TextualFromNative(nil, native)
+			native, _, _ := schema.Codec().NativeFromBinary(record.Value[5:])
+			order, _ := schema.Codec().TextualFromNative(nil, native)
 			// Print the record value
 			fmt.Println(string(order))
 		} else {
