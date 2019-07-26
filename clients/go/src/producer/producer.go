@@ -43,9 +43,21 @@ func main() {
 		"sasl.password":     props["sasl.password"]})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create producer ---> %s", err))
-	} else {
-		defer producer.Close()
 	}
+	defer producer.Close()
+	go func() {
+		for event := range producer.Events() {
+			switch ev := event.(type) {
+			case *kafka.Message:
+				message := ev
+				if ev.TopicPartition.Error != nil {
+					fmt.Printf("Error delivering the order '%s'\n", message.Key)
+				} else {
+					fmt.Printf("Order '%s' created successfully!\n", message.Key)
+				}
+			}
+		}
+	}()
 
 	schema, err := schemaRegistryClient.GetLatestSchema(topic, false)
 	if schema == nil {
@@ -81,11 +93,6 @@ func main() {
 			TopicPartition: kafka.TopicPartition{
 				Topic: &topic, Partition: kafka.PartitionAny},
 			Key: []byte(key.String()), Value: recordValue}, nil)
-		events := <-producer.Events()
-		message := events.(*kafka.Message)
-		if message.TopicPartition.Error == nil {
-			fmt.Println("Order '" + key.String() + "' created successfully!")
-		}
 
 		// Sleep for one second...
 		time.Sleep(1 * time.Second)
