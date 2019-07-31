@@ -31,9 +31,8 @@ func main() {
 		"auto.offset.reset":  "latest"})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create consumer %s", err))
-	} else {
-		defer consumer.Close()
 	}
+	defer consumer.Close()
 
 	consumer.SubscribeTopics([]string{utils.ORDERS}, nil)
 
