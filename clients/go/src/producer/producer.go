@@ -45,6 +45,7 @@ func main() {
 		panic(fmt.Sprintf("Failed to create producer %s", err))
 	}
 	defer producer.Close()
+
 	go func() {
 		for event := range producer.Events() {
 			switch ev := event.(type) {
