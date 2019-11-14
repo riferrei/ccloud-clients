@@ -96,7 +96,7 @@ func main() {
 			Key: []byte(key.String()), Value: recordValue}, nil)
 
 		// Sleep for one second...
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 
 	}
 
